@@ -95,7 +95,8 @@ public class TelnetServer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Connection error: {ex.Message}");
+                //Console.WriteLine($"Connection error: {ex.Message}");
+                AnsiConsole.WriteException(ex);
             }
             finally
             {

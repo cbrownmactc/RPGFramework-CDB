@@ -6,16 +6,28 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using RPGFramework.Geography;
+using RPGFramework.Persistence;
 
 namespace RPGFramework
 {
-    // TODO: Consider moving all load/save methods to ObjectStorage
+    /// <summary>
+    /// Represents the global state and core management logic for the game server, 
+    /// including loaded areas, players, game time, and server lifecycle.
+    /// </summary>
+    /// <remarks><para> <b>Singleton Access:</b> Use the <see cref="Instance"/> property 
+    /// to access the single <see cref="GameState"/> instance throughout the application. </para>
+    /// <para> <b>Persistence:</b> The <see cref="Persistence"/> property determines how 
+    /// game data is loaded and saved. By default, a JSON-based persistence
+    /// mechanism is used, but this can be replaced with a custom implementation. </para> 
     public sealed class GameState
     {
         // Static Fields and Properties
         private static readonly Lazy<GameState> _instance = new Lazy<GameState>(() => new GameState());
 
         public static GameState Instance => _instance.Value;
+
+        // The persistence mechanism to use. Default is JSON-based persistence.
+        public static IGamePersistence Persistence { get; set; } = new JsonGamePersistence();
 
         // Fields
         private bool _isRunning = false;
@@ -47,7 +59,6 @@ namespace RPGFramework
 
         #endregion --- Properties ---
 
-
         #region --- Methods ---
         private GameState() 
         {
@@ -60,68 +71,118 @@ namespace RPGFramework
         }
 
         /// <summary>
-        /// TODO: It would be handy to be able to load a single area. 
+        /// This would be used by an admin command to load an area on demand. 
+        /// For now useful primarily for reloading externally crearted changes
         /// </summary>
         /// <param name="areaName"></param>
-        private static void LoadArea(string areaName)
+        private Task LoadArea(string areaName)
         {
-
-        }
-
-        // Load all Area files from /data/areas. Each Area file will contain some basic info and lists of rooms and exits
-        private void LoadAllAreas()
-        {
-            Areas.Clear();
-            List<Area> areas = ObjectStorage.LoadAllObjects<Area>("data/areas/");
-            foreach (Area area in areas)
+            Area? area = GameState.Persistence.LoadAreaAsync(areaName).Result;
+            if (area != null)
             {
-                Areas.Add(area.Id, area);
+                if (Areas.ContainsKey(area.Id))               
+                    Areas[area.Id] = area;
+                else
+                    Areas.Add(area.Id, area);
+                
                 Console.WriteLine($"Loaded area: {area.Name}");
             }
-        }
-        private void LoadAllPlayers()
-        {
-            // Should we clear all first?
 
-            // Load all players
-            List<Player> players = ObjectStorage.LoadAllObjects<Player>("data/players/");
-            foreach (Player player in players)
+            return Task.CompletedTask;
+        }
+
+        // Load all Area files from /data/areas. Each Area file will contain some
+        // basic info and lists of rooms and exits.
+        private async Task LoadAllAreas()
+        {
+            Areas.Clear();
+
+            var loaded = await Persistence.LoadAreasAsync();
+            foreach (var kvp in loaded)
             {
-                Players.Add(player.Name, player);
-                Console.WriteLine($"Loaded player: {player.Name}");
+                Areas.Add(kvp.Key, kvp.Value);
+                Console.WriteLine($"Loaded area: {kvp.Value.Name}");
             }
         }
 
-        private void SaveAllAreas()
+        /// <summary>
+        /// Loads all player data from persistent storage and adds each player 
+        /// to the <see cref="Players"/> collection.
+        /// </summary>
+        /// <remarks>This method loads all player objects from the data source and 
+        /// populates the <see cref="Players"/> dictionary using each player's name 
+        /// as the key. Existing entries in <see cref="Players"/>
+        /// are not cleared before loading; newly loaded players are added or 
+        /// overwrite existing entries with the same name.</remarks>
+        private async Task LoadAllPlayers()
         {
-            foreach(Area a in Areas.Values)
+            Players.Clear();
+
+            var loaded = await Persistence.LoadPlayersAsync();
+            foreach (var kvp in loaded)
             {
-                ObjectStorage.SaveObject(a, "data/areas/", $"{a.Name}.xml");
-                Console.WriteLine($"Saved area: {a.Name}");
+                Players.Add(kvp.Key, kvp.Value);
+                Console.WriteLine($"Loaded player: {kvp.Value.Name}");
             }
         }
 
-        private void SaveAllPlayers(bool includeOffline = false)
+        /// <summary>
+        /// Saves all area entities asynchronously to the persistent storage.
+        /// </summary>
+        /// <remarks>This method initiates an asynchronous operation to persist 
+        /// the current set of areas. The save operation is performed for all 
+        /// areas contained in the collection at the time of invocation.</remarks>
+        /// <returns>A <see cref="Task"/> that represents the asynchronous save operation.</returns>
+        private Task SaveAllAreas()
         {
-            foreach (Player player in Players.Values)
-            {
-                if (player.IsOnline || includeOffline)
-                {
-                    ObjectStorage.SaveObject(player, "data/players/", $"{player.Name}.xml");
-                    Console.WriteLine($"Saved player: {player.Name}");
-                }
-            }
+            return Persistence.SaveAreasAsync(Areas.Values);
         }
 
-        public void SavePlayer(Player p)
+        /// <summary>
+        /// Saves all player data asynchronously.
+        /// </summary>
+        /// <param name="includeOffline"><see langword="true"/> to include offline 
+        /// players in the save operation; otherwise, only online players are saved.</param>
+        /// <returns>A task that represents the asynchronous save operation.</returns>
+        private Task SaveAllPlayers(bool includeOffline = false)
         {
-            ObjectStorage.SaveObject(p, "data/players/", $"{p.Name}.xml");
+            var toSave = includeOffline
+                ? Players.Values
+                : Players.Values.Where(p => p.IsOnline);
+
+            return Persistence.SavePlayersAsync(toSave);
         }
 
+        /// <summary>
+        /// Saves the specified player to persistent storage asynchronously.
+        /// </summary>
+        /// <param name="p">The <see cref="Player"/> instance to be saved. Cannot be <c>null</c>.</param>
+        /// <returns>A task that represents the asynchronous save operation.</returns>
+        public Task SavePlayer(Player p)
+        {
+            return Persistence.SavePlayerAsync(p);
+        }
+
+        /// <summary>
+        /// Initializes and starts the game server 
+        ///   loading all areas
+        ///   loading all players
+        ///   starting the Telnet server
+        ///   launching background threads for periodic tasks.
+        /// </summary>
+        /// <remarks>This method must be called before the server can accept 
+        /// Telnet connections or process game logic. It loads all required game 
+        /// data and starts background threads for saving state and updating the
+        /// time of day.</remarks>
+        /// <returns>A task that represents the asynchronous start operation.</returns>
         public async Task Start()
         {
-            LoadAllAreas();
-            LoadAllPlayers();
+            // Prevent multiple starts (TODO: Add restart / stop functionality)
+            if (_isRunning)
+                throw new InvalidOperationException("Game server is already running.");
+
+            await LoadAllAreas();
+            await LoadAllPlayers();
 
             this.TelnetServer = new TelnetServer(5555);
             await this.TelnetServer.StartAsync();
@@ -162,13 +223,13 @@ namespace RPGFramework
         /// Things that need to be saved periodically
         /// </summary>
         /// <param name="interval"></param>
-        private void SaveTask(int interval)
+        private async void SaveTask(int interval)
         {
             while (true)
             {
-                SaveAllPlayers();
+                await SaveAllPlayers();
 
-                SaveAllAreas();
+                await SaveAllAreas();
                 
                 /*
 

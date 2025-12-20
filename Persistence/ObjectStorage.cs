@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace RPGFramework
+namespace RPGFramework.Persistence
 {
     public class ObjectStorage
     {

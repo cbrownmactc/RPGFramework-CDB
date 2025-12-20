@@ -33,7 +33,7 @@ namespace RPGFramework.Commands
             "s", "south",
             "w", "west",
             "u", "up",
-            "d", "down"
+            "d", "down"      
         };
 
         public bool Execute(Character character, List<string> parameters)
@@ -47,7 +47,8 @@ namespace RPGFramework.Commands
                 return false;
             }
 
-            string directionStr = parameters[1].ToLower();
+            // Get direction from last parameter (in case they used 'move north' or just 'north')
+            string directionStr = parameters[parameters.Count-1].ToLower();
             Direction? direction = directionStr switch
             {
                 "n" or "north" => Direction.North,
