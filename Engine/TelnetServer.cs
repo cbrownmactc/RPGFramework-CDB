@@ -29,11 +29,14 @@ public class TelnetServer
         _isRunning = true;
         Console.WriteLine("Telnet Server is running...");
 
-        while (_isRunning)
+        while (_isRunning && GameState.Instance.IsRunning)
         {
             TcpClient client = await _listener.AcceptTcpClientAsync();
             _ = HandleClientAsync(client);
         }
+
+        Console.WriteLine("Telnet Server is stopped...");
+        _listener.Stop();
     }
 
     private async Task HandleClientAsync(TcpClient client)
@@ -108,7 +111,6 @@ public class TelnetServer
     public void Stop()
     {
         _isRunning = false;
-        _listener.Stop();
     }
 
 }

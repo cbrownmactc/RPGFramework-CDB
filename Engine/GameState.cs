@@ -29,8 +29,9 @@ namespace RPGFramework
         // The persistence mechanism to use. Default is JSON-based persistence.
         public static IGamePersistence Persistence { get; set; } = new JsonGamePersistence();
 
+        public bool IsRunning { get; private set; } = false;
         // Fields
-        private bool _isRunning = false;
+        //private bool IsRunning = false;
         private Thread? _saveThread;
         private Thread? _timeOfDayThread;
 
@@ -39,7 +40,8 @@ namespace RPGFramework
         /// <summary>
         /// All Areas are loaded into this dictionary
         /// </summary>
-        [JsonIgnore] public Dictionary<int, Area> Areas { get; set; } = 
+        [JsonIgnore]
+        public Dictionary<int, Area> Areas { get; set; } =
             new Dictionary<int, Area>();
 
         /// <summary>
@@ -52,15 +54,15 @@ namespace RPGFramework
         /// </summary>
         [JsonIgnore] public Dictionary<string, Player> Players { get; set; } = new Dictionary<string, Player>();
 
-        public int StartAreaId {  get; set; } = 0;
-        public int StartRoomId {  get; set; } = 0;
-        
+        public int StartAreaId { get; set; } = 0;
+        public int StartRoomId { get; set; } = 0;
+
         public TelnetServer? TelnetServer { get; private set; }
 
         #endregion --- Properties ---
 
         #region --- Methods ---
-        private GameState() 
+        private GameState()
         {
 
         }
@@ -80,11 +82,11 @@ namespace RPGFramework
             Area? area = GameState.Persistence.LoadAreaAsync(areaName).Result;
             if (area != null)
             {
-                if (Areas.ContainsKey(area.Id))               
+                if (Areas.ContainsKey(area.Id))
                     Areas[area.Id] = area;
                 else
                     Areas.Add(area.Id, area);
-                
+
                 Console.WriteLine($"Loaded area: {area.Name}");
             }
 
@@ -178,14 +180,18 @@ namespace RPGFramework
         public async Task Start()
         {
             // Prevent multiple starts (TODO: Add restart / stop functionality)
-            if (_isRunning)
+            if (IsRunning)
                 throw new InvalidOperationException("Game server is already running.");
+
+            IsRunning = true;
 
             await LoadAllAreas();
             await LoadAllPlayers();
 
             this.TelnetServer = new TelnetServer(5555);
             await this.TelnetServer.StartAsync();
+
+
 
             /* We may want to do this to bootstrap a starting area/room if none are available to be loaded.
             //Area startArea = new Area() { Id = 0, Name = "Void Area", Description = "Start Area" };
@@ -213,7 +219,30 @@ namespace RPGFramework
             // NPC threads?
             // Room threads?
 
-            _isRunning = true;
+
+        }
+
+        public async Task Stop()
+        {               
+            await SaveAllPlayers(includeOffline: true);         
+            await SaveAllAreas();
+
+            foreach (var player in Players.Values.Where(p => p.IsOnline))
+            {
+                player.Logout();
+            }
+
+            this.TelnetServer!.Stop();
+
+            // Signal threads to stop
+            IsRunning = false;
+
+            // Wait for threads to finish
+            _saveThread?.Join();
+            _timeOfDayThread?.Join();
+
+            // Exit program
+            Environment.Exit(0);
         }
 
         #endregion --- Methods ---
@@ -225,31 +254,13 @@ namespace RPGFramework
         /// <param name="interval"></param>
         private async void SaveTask(int interval)
         {
-            while (true)
+            while (IsRunning)
             {
                 await SaveAllPlayers();
-
                 await SaveAllAreas();
-                
-                /*
 
-                // Save all NPCs
-                foreach (NPC npc in NPCManager.Instance.NPCs)
-                {
-                    // Save NPC
-                }
-
-                // Save all items
-                foreach (Item item in ItemManager.Instance.Items)
-                {
-                    // Save item
-                }
-                */
-
-                // Sleep for interval
                 Thread.Sleep(interval);
                 Console.WriteLine("Autosave complete.");
-                
             }
         }
 
@@ -261,7 +272,7 @@ namespace RPGFramework
         /// <param name="interval"></param>
         private void TimeOfDayTask(int interval)
         {
-            while (true)
+            while (IsRunning)
             {
                 Console.WriteLine("Updated time.");
                 double hours = (double)interval / 60000;
