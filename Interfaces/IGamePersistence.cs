@@ -66,6 +66,15 @@ namespace RPGFramework.Interfaces
         /// <param name="player">The <see cref="Player"/> instance to save. Cannot be <c>null</c>.</param>
         /// <returns>A task that represents the asynchronous save operation.</returns>
         Task SavePlayerAsync(Player player);
+
+        /// <summary>
+        /// Asynchronously saves the specified catalog under the given name.
+        /// </summary>
+        /// <param name="catalog">The catalog to be saved. Cannot be null.</param>
+        /// <param name="catalogName">The name to assign to the saved catalog. Cannot be null or empty.</param>
+        /// <returns>A task that represents the asynchronous save operation.</returns>
+        Task SaveCatalog(object catalog, string catalogName);
+
     }
 
     /// <summary>

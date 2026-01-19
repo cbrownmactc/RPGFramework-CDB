@@ -1,4 +1,5 @@
-﻿using RPGFramework.Interfaces;
+﻿using RPGFramework;
+using RPGFramework.Interfaces;
 
 namespace RPGFramework.Commands
 {
@@ -8,6 +9,7 @@ namespace RPGFramework.Commands
         {
             return new List<ICommand>
             {
+                new ExampleCommand(),
                 new TestItemSizeCommand(),
                 // Add more test commands here as needed
             };
@@ -25,19 +27,20 @@ namespace RPGFramework.Commands
     internal class ExampleCommand : ICommand
     {
         // This is the command a player would type to execute this command
-        public string Name => "example";
+        public string Name => "/savecat";
 
         // These are the aliases that can also be used to execute this command. This can be empty.
-        public IEnumerable<string> Aliases => new List<string>() { "ex" };
+        public IEnumerable<string> Aliases => new List<string>() {  };
 
         // What will happen when the command is executed
         public bool Execute(Character character, List<string> parameters)
         {
-            // A lot of times we want to make sure it's a Player issuing the command, but not always
-            if (character is Player player)
-            {
-                player.WriteLine("This is an example command.");
-            }
+            if (character is not Player player)
+                return false;
+
+            Catalog<string, Player> pc = new();
+            pc.Add(player.Name, player);
+            pc.SaveCatalog().Wait();
 
             // If the command failed to run for some reason, return false
             return true;

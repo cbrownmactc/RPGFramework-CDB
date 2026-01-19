@@ -1,5 +1,7 @@
-﻿using RPGFramework.Geography;
+﻿using RPGFramework;
+using RPGFramework.Geography;
 using RPGFramework.Interfaces;
+using System.Net.Http.Headers;
 
 namespace RPGFramework.Persistence
 {
@@ -173,6 +175,12 @@ namespace RPGFramework.Persistence
         public Task SavePlayerAsync(Player player)
         {
             ObjectStorage.SaveObject(player, "data/players/", $"{player.Name}.json");
+            return Task.CompletedTask;
+        }
+
+        public Task SaveCatalog(object catalog, string catalogName)
+        {
+            ObjectStorage.SaveObject(catalog, "data/catalogs/", $"{catalogName}.json");
             return Task.CompletedTask;
         }
         #endregion
