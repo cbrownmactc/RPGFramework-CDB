@@ -1,4 +1,5 @@
 ﻿
+using System.Net.Http.Headers;
 using System.Text.Json.Serialization;
 using RPGFramework.Enums;
 using RPGFramework.Geography;
@@ -26,9 +27,9 @@ namespace RPGFramework
         // The persistence mechanism to use. Default is JSON-based persistence.
         public static IGamePersistence Persistence { get; set; } = new JsonGamePersistence();
 
-        public bool IsRunning { get; private set; } = false;
+        [JsonIgnore] public bool IsRunning { get; private set; } = false;
 
-        #region --- Properties ---
+
 
         #region --- Fields ---
         private CancellationTokenSource? _saveCts;
@@ -38,12 +39,24 @@ namespace RPGFramework
 
         #endregion
 
+        #region --- Unserialized Properties ---
         /// <summary>
         /// All Areas are loaded into this dictionary
         /// </summary>
         [JsonIgnore] public Dictionary<int, Area> Areas { get; set; } =
             new Dictionary<int, Area>();
 
+        [JsonIgnore] public Dictionary<string, ICatalog> Catalogs { get; private set; } = [];
+
+        /// <summary>
+        /// All Players are loaded into this dictionary, with the player's name as the key 
+        /// </summary>
+        [JsonIgnore] public Dictionary<string, Player> Players { get; set; } = [];
+
+        [JsonIgnore] public TelnetServer? TelnetServer { get; private set; }        
+        #endregion
+
+        #region --- Properties ---
         // TODO: Move this to configuration settings class
         public DebugLevel DebugLevel { get; set; } = DebugLevel.Debug;
 
@@ -52,22 +65,18 @@ namespace RPGFramework
         /// </summary>
         public DateTime GameDate { get; set; } = new DateTime(2021, 1, 1);
 
-        /// <summary>
-        /// All Players are loaded into this dictionary, with the player's name as the key 
-        /// </summary>
-        [JsonIgnore] public Dictionary<string, Player> Players { get; set; } = new Dictionary<string, Player>();
-
         // Move starting area/room to configuration settings
         public int StartAreaId { get; set; } = 0;
         public int StartRoomId { get; set; } = 0;
-
-        public TelnetServer? TelnetServer { get; private set; }
 
         #endregion --- Properties ---
 
         #region --- Methods ---
         private GameState()
         {
+            // Add Catalogs here
+            Catalogs.Add("Item", new Catalog<string, Item>());
+
 
         }
 
@@ -76,6 +85,18 @@ namespace RPGFramework
             Players.Add(player.Name, player);
         }
 
+        #region --- Load & Save Methods ---
+        #region LoadCatalogsAsync Method
+        public async Task LoadCatalogsAsync()
+        {
+            foreach (var catalog in Catalogs.Values)
+            {
+                await catalog.LoadCatalogAsync();
+            }
+        }
+        #endregion
+
+        #region LoadArea Method
         /// <summary>
         /// This would be used by an admin command to load an area on demand. 
         /// For now useful primarily for reloading externally crearted changes
@@ -96,7 +117,9 @@ namespace RPGFramework
 
             return Task.CompletedTask;
         }
+        #endregion
 
+        #region LoadAllAreas Method
         // Load all Area files from /data/areas. Each Area file will contain some
         // basic info and lists of rooms and exits.
         private async Task LoadAllAreas()
@@ -110,7 +133,9 @@ namespace RPGFramework
                 GameState.Log(DebugLevel.Alert, $"Area '{kvp.Value.Name}' loaded successfully.");
             }
         }
+        #endregion
 
+        #region LoadAllPlayers Method
         /// <summary>
         /// Loads all player data from persistent storage and adds each player 
         /// to the <see cref="Players"/> collection.
@@ -133,7 +158,9 @@ namespace RPGFramework
 
             GameState.Log(DebugLevel.Alert, $"{Players.Count} players loaded.");
         }
+        #endregion
 
+        #region SaveAllAreas Method
         /// <summary>
         /// Saves all area entities asynchronously to the persistent storage.
         /// </summary>
@@ -145,7 +172,9 @@ namespace RPGFramework
         {
             return Persistence.SaveAreasAsync(Areas.Values);
         }
+        #endregion
 
+        #region SaveAllPlayers Method
         /// <summary>
         /// Saves all player data asynchronously.
         /// </summary>
@@ -160,7 +189,9 @@ namespace RPGFramework
 
             return Persistence.SavePlayersAsync(toSave);
         }
+        #endregion
 
+        #region SavePlayer Method
         /// <summary>
         /// Saves the specified player to persistent storage asynchronously.
         /// </summary>
@@ -170,7 +201,20 @@ namespace RPGFramework
         {
             return Persistence.SavePlayerAsync(p);
         }
+        #endregion
 
+        #region SaveCatalogsAsync Method
+        public async Task SaveCatalogsAsync()
+        {
+            foreach (var kvp in Catalogs)
+            {
+                await kvp.Value.SaveCatalogAsync();
+            }
+        }
+        #endregion
+        #endregion
+
+        #region Start Method (Async)
         /// <summary>
         /// Initializes and starts the game server 
         ///   loading all areas
@@ -196,12 +240,7 @@ namespace RPGFramework
 
             await LoadAllAreas();
             await LoadAllPlayers();
-
-            // Load Item (Weapon/Armor/Consumable/General) catalogs
-            // Load NPC (Mobs/Shop/Guild/Quest) catalogs
-
-
-
+            await LoadCatalogsAsync();
 
             // TODO: Consider moving thread methods to their own class
 
@@ -222,7 +261,9 @@ namespace RPGFramework
             this.TelnetServer = new TelnetServer(5555);
             await this.TelnetServer.StartAsync();
         }
+        #endregion
 
+        #region Stop Method (Async)
         /// <summary>
         /// Stops the server, saving all player and area data, disconnecting online players, 
         /// and terminating the application.
@@ -255,6 +296,7 @@ namespace RPGFramework
             // Exit program
             Environment.Exit(0);
         }
+        #endregion
 
         #endregion --- Methods ---
 
@@ -283,6 +325,7 @@ namespace RPGFramework
                 {
                     await SaveAllPlayers();
                     await SaveAllAreas();
+                    await SaveCatalogsAsync();
 
                     GameState.Log(DebugLevel.Info, "Autosave complete.");
                 }

@@ -8,9 +8,11 @@ namespace RPGFramework.Interfaces
         string Name { get; }
         int Count { get; }
 
-        Task SaveCatalog();
-    }
+        Task LoadCatalogAsync();
 
+        Task SaveCatalogAsync();
+
+    }
 
     public interface ICatalog<TKey, TValue> : ICatalog where TKey : notnull
     {

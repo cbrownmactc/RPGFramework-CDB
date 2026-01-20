@@ -40,7 +40,7 @@ namespace RPGFramework.Commands
 
             Catalog<string, Player> pc = new();
             pc.Add(player.Name, player);
-            pc.SaveCatalog().Wait();
+            pc.SaveCatalogAsync().Wait();
 
             // If the command failed to run for some reason, return false
             return true;
