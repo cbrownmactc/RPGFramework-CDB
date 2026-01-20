@@ -43,8 +43,7 @@ namespace RPGFramework
         /// <summary>
         /// All Areas are loaded into this dictionary
         /// </summary>
-        [JsonIgnore] public Dictionary<int, Area> Areas { get; set; } =
-            new Dictionary<int, Area>();
+        [JsonIgnore] public Dictionary<int, Area> Areas { get; set; } = [];
 
         [JsonIgnore] public Dictionary<string, ICatalog> Catalogs { get; private set; } = [];
 
@@ -107,11 +106,8 @@ namespace RPGFramework
             Area? area = GameState.Persistence.LoadAreaAsync(areaName).Result;
             if (area != null)
             {
-                if (Areas.ContainsKey(area.Id))
+                if (!Areas.TryAdd(area.Id, area))
                     Areas[area.Id] = area;
-                else
-                    Areas.Add(area.Id, area);
-
                 GameState.Log(DebugLevel.Alert, $"Area '{area.Name}' loaded successfully.");
             }
 
@@ -197,7 +193,7 @@ namespace RPGFramework
         /// </summary>
         /// <param name="p">The <see cref="Player"/> instance to be saved. Cannot be <c>null</c>.</param>
         /// <returns>A task that represents the asynchronous save operation.</returns>
-        public Task SavePlayer(Player p)
+        public static Task SavePlayer(Player p)
         {
             return Persistence.SavePlayerAsync(p);
         }

@@ -40,14 +40,14 @@ namespace RPGFramework.Persistence
 
         private static void CreateStarterArea()
         {
-            Area area = new Area
+            Area area = new()
             {
                 Id = 0,
                 Name = "Starter Area",
                 Description = "The first place new players enter."
             };
 
-            Room room = new Room
+            Room room = new()
             {
                 Id = 0,
                 AreaId = 0,
@@ -66,8 +66,7 @@ namespace RPGFramework.Persistence
             // Proceed with caution though, this will overwrite any existing files in the runtime data folder.
             options.CopyFilesFromDataSeedToRuntimeData = false;
 
-            if (options == null)
-                throw new ArgumentNullException(nameof(options));
+            ArgumentNullException.ThrowIfNull(options);
 
             string baseDir = AppContext.BaseDirectory;
 
@@ -76,11 +75,13 @@ namespace RPGFramework.Persistence
             string runtimePlayersDir = Path.Combine(runtimeDataDir, "players");
             string runtimeCatalogsDir = Path.Combine(runtimeDataDir, "catalogs");
 
-            List<DirectoryInfo> dataDirectories = new List<DirectoryInfo>();
-            dataDirectories.Add(Directory.CreateDirectory(runtimeDataDir));
-            dataDirectories.Add(Directory.CreateDirectory(runtimeAreasDir));
-            dataDirectories.Add(Directory.CreateDirectory(runtimePlayersDir));
-            dataDirectories.Add(Directory.CreateDirectory(runtimeCatalogsDir));
+            List<DirectoryInfo> _ =
+            [
+                Directory.CreateDirectory(runtimeDataDir),
+                Directory.CreateDirectory(runtimeAreasDir),
+                Directory.CreateDirectory(runtimePlayersDir),
+                Directory.CreateDirectory(runtimeCatalogsDir),
+            ];
 
             if (!string.IsNullOrWhiteSpace(options.SeedDataRelativePath))
             {
@@ -132,7 +133,7 @@ namespace RPGFramework.Persistence
         #region Load Methods
         public Task<Area?> LoadAreaAsync(string areaName)
         {
-            var area = ObjectStorage.LoadObject<Area>($"data/areas/",$"{areaName}");            
+            var area = ObjectStorage.LoadObject<Area?>($"data/areas/",$"{areaName}");            
             return Task.FromResult(area);
         }
 
@@ -152,7 +153,7 @@ namespace RPGFramework.Persistence
 
         public Task<T?> LoadCatalogAsync<T>(string catalogName) where T : class
         {
-            var catalog = ObjectStorage.LoadObject<T>("data/catalogs/", $"{catalogName}.json");
+            var catalog = ObjectStorage.LoadObject<T?>("data/catalogs/", $"{catalogName}.json");
             return Task.FromResult(catalog);
         }
         #endregion

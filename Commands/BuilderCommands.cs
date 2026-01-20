@@ -10,11 +10,11 @@ namespace RPGFramework.Commands
     {
         public static List<ICommand> GetAllCommands()
         {
-            return new List<ICommand>
-            {
+            return
+            [
                 new RoomBuilderCommand(),
                 // Add more builder commands here as needed
-            };
+            ];
         }
     }
 
@@ -26,7 +26,7 @@ namespace RPGFramework.Commands
     {
         public string Name => "/room";
 
-        public IEnumerable<string> Aliases => new List<string>( );
+        public IEnumerable<string> Aliases => [];
 
         #region Execute Method
         public bool Execute(Character character, List<string> parameters)
@@ -115,7 +115,7 @@ namespace RPGFramework.Commands
         #endregion
 
         #region RoomList Method
-        private static bool RoomList(Player player, List<string> parameters)       
+        private static bool RoomList(Player player, List<string> _)       
         {
             var table = new Table();
             table.AddColumn("Room ID");
@@ -150,7 +150,7 @@ namespace RPGFramework.Commands
                     player.GetRoom().Name = parameters[3];
                     return true;
                 case "tags":
-                    player.GetRoom().Tags = parameters[3].Split(',').Select(t => t.Trim()).ToList();
+                    player.GetRoom().Tags = [.. parameters[3].Split(',').Select(t => t.Trim())];
                     return true;
                 default:
                     WriteUsage(player);
