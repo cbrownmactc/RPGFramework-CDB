@@ -9,15 +9,16 @@ namespace RPGFramework.Commands
     {
         public static List<ICommand> GetAllCommands()
         {
-            return new List<ICommand>
-            {
+            return
+            [
                 new MapCommand(),
                 new MoveCommand(),
                 // Add more navigation commands here as needed
-            };
+            ];
         }
     }
 
+    #region MapCommand Class
     /// <summary>
     /// Represents a command that displays the local map to a player character.
     /// </summary>
@@ -27,7 +28,7 @@ namespace RPGFramework.Commands
     {
         public string Name => "map";
 
-        public IEnumerable<string> Aliases => new List<string> { };
+        public IEnumerable<string> Aliases => [];
 
         public bool Execute(Character character, List<string> parameters)
         {
@@ -40,6 +41,8 @@ namespace RPGFramework.Commands
             return false;
         }
     }
+    #endregion
+
 
     /// <summary>
     /// Move a character (player or NPC) in a direction if possible.
@@ -47,29 +50,26 @@ namespace RPGFramework.Commands
     internal class MoveCommand : ICommand
     {
         public string Name => "move";
-        public IEnumerable<string> Aliases => new List<string> 
-        {
+        public IEnumerable<string> Aliases =>
+        [
             "n", "north",
             "e", "east",
             "s", "south",
             "w", "west",
             "u", "up",
             "d", "down"      
-        };
+        ];
 
         public bool Execute(Character character, List<string> parameters)
         {
             if (parameters == null || parameters.Count == 0)
             {
-                if (character is Player player)
-                {
-                    player.WriteLine("Usage: move <direction>");
-                }
+                Comm.SendToIfPlayer(character, "Usage: move <direction>");
                 return false;
             }
 
             // Get direction from last parameter (in case they used 'move north' or just 'north')
-            string directionStr = parameters[parameters.Count-1].ToLower();
+            string directionStr = parameters[^1].ToLower();
             Direction? direction = directionStr switch
             {
                 "n" or "north" => Direction.North,
@@ -85,9 +85,9 @@ namespace RPGFramework.Commands
                 Navigation.Move(character, direction.Value);
                 return true;
             }
-            else if (character is Player player)
+            else
             {
-                player.WriteLine("Invalid direction. Valid directions are: north, east, south, west, up, down.");
+                Comm.SendToIfPlayer(character, "Invalid direction. Valid directions are: north, east, south, west, up, down.");               
             }
             return false;
         }

@@ -14,7 +14,7 @@ namespace RPGFramework
         public PlayerNetwork? Network { get; set; }
 
         [JsonIgnore]
-        public IAnsiConsole Console { get; set; }
+        public  IAnsiConsole? Console { get; set; }
 
         #region --- Constructors ---
         // Constructor (creates a new player)
@@ -60,6 +60,7 @@ namespace RPGFramework
         }
         #endregion
 
+        #region GetIPAddress Method
         /// <summary>
         /// Returns the IP Address of Player. 
         /// This is just for convenience since it's kind of buried in the Network object
@@ -72,5 +73,6 @@ namespace RPGFramework
 
             return ((System.Net.IPEndPoint)Network.Client.Client.RemoteEndPoint).Address.ToString();
         }
+        #endregion
     }
 }

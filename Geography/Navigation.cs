@@ -16,23 +16,19 @@ namespace RPGFramework.Geography
         public static void Move(Character character, Direction direction)
         {
             Room currentRoom = character.GetRoom();
-            Exit exit = currentRoom.GetExits().FirstOrDefault(e => e.ExitDirection == direction);
+            Exit? exit = currentRoom.GetExits().FirstOrDefault(e => e.ExitDirection == direction);
 
             // If invalid exit, send error message (if player)
             if (exit == null)
             {
-                if (character is Player)
-                {
-                    Player p = (Player)character;
-                    p.WriteLine("You can't go that way.");
-                }
+                Comm.SendToIfPlayer(character, "You can't go that way.");
                 return;
             }
 
             Room destinationRoom = GameState.Instance.Areas[character.AreaId].Rooms[exit.DestinationRoomId];
 
-            currentRoom.LeaveRoom(character, destinationRoom);
-            destinationRoom.EnterRoom(character, currentRoom);
+            currentRoom.LeaveRoom(character);
+            destinationRoom.EnterRoom(character);
             
             character.AreaId = destinationRoom.AreaId;
             character.LocationId = exit.DestinationRoomId;
@@ -40,23 +36,16 @@ namespace RPGFramework.Geography
 
         public static Direction GetOppositeDirection(Direction direction)
         {
-            switch (direction)
+            return direction switch
             {
-                case Direction.North:
-                    return Direction.South;
-                case Direction.South:
-                    return Direction.North;
-                case Direction.East:
-                    return Direction.West;
-                case Direction.West:
-                    return Direction.East;
-                case Direction.Up:
-                    return Direction.Down;
-                case Direction.Down:
-                    return Direction.Up;
-                default:
-                    return Direction.None;
-            }
+                Direction.North => Direction.South,
+                Direction.South => Direction.North,
+                Direction.East => Direction.West,
+                Direction.West => Direction.East,
+                Direction.Up => Direction.Down,
+                Direction.Down => Direction.Up,
+                _ => Direction.None,
+            };
         }
     }
 }

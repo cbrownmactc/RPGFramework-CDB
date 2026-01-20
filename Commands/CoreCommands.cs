@@ -12,8 +12,8 @@ namespace RPGFramework.Commands
     {
         public static List<ICommand> GetAllCommands()
         {
-            return new List<ICommand>
-            {
+            return
+            [
                 new AFKCommand(),
                 new IpCommand(),
                 new LookCommand(),
@@ -21,16 +21,15 @@ namespace RPGFramework.Commands
                 new SayCommand(),
                 new TimeCommand(),
                 // Add other core commands here as they are implemented
-            };
+            ];
         }
-
-
     }
 
+    #region AFKCommand Class
     internal class AFKCommand : ICommand
     {
         public string Name => "afk";
-        public IEnumerable<string> Aliases => new List<string> { };
+        public IEnumerable<string> Aliases => [];
         public bool Execute(Character character, List<string> parameters)
         {
             if (character is Player player)
@@ -42,26 +41,25 @@ namespace RPGFramework.Commands
             return false;
         }
     }
+    #endregion
 
+    #region IpCommand Class
     internal class IpCommand : ICommand
     {
         public string Name => "ip";
-        public IEnumerable<string> Aliases => new List<string> { };
+        public IEnumerable<string> Aliases => [];
         public bool Execute(Character character, List<string> parameters)
         {
-            if (character is Player player)
-            {
-                player.WriteLine($"Your IP address is {player.GetIPAddress()}");
-                return true;
-            }
-            return false;
+            return Comm.SendToIfPlayer(character, $"Your IP address is {((Player)character).GetIPAddress()}");
         }
     }
+    #endregion
 
+    #region LookCommand Class
     internal class LookCommand : ICommand
     {
         public string Name => "look";
-        public IEnumerable<string> Aliases => new List<string> { "l" };
+        public IEnumerable<string> Aliases => [ "l" ];
         public bool Execute(Character character, List<string> parameters)
         {
             if (character is Player player)
@@ -78,11 +76,13 @@ namespace RPGFramework.Commands
             return false;
         }
     }
+    #endregion
 
+    #region QuitCommand Class
     internal class QuitCommand : ICommand
     {
         public string Name => "quit";
-        public IEnumerable<string> Aliases => new List<string> { "exit" };
+        public IEnumerable<string> Aliases => ["exit"];
 
         public bool Execute(Character character, List<string> parameters)
         {
@@ -94,38 +94,38 @@ namespace RPGFramework.Commands
             return false;
         }
     }
+    #endregion
 
+    #region SayCommand Class
     internal class SayCommand : ICommand
     {
         public string Name => "say";
-        public IEnumerable<string> Aliases => new List<string> { "\"".Normalize(), "'".Normalize() };
+        public IEnumerable<string> Aliases => [ "\"", "'" ];
         public bool Execute(Character character, List<string> parameters)
         {
             // If no message and it's a player, tell them to say something
-            if (parameters.Count < 2 && character is Player player)
+            if (parameters.Count < 2)
             {
-                player.WriteLine("Say what?");
-                return true;
+                return Comm.SendToIfPlayer(character, "Say what?");
             }
+
             Comm.RoomSay(character.GetRoom(), parameters[1], character);
             return true;
         }
     }
+    #endregion
 
+    #region TimeCommand Class
     internal class TimeCommand : ICommand
     {
         public string Name => "time";
-        public IEnumerable<string> Aliases => new List<string> { };
+        public IEnumerable<string> Aliases => [];
         public bool Execute(Character character, List<string> parameters)
         {
-            if (character is Player player)
-            {
-                player.WriteLine($"The time is {GameState.Instance.GameDate.ToShortTimeString()}");
-                return true;
-            }
-            return false;
+            return Comm.SendToIfPlayer(character, $"The time is {GameState.Instance.GameDate:t}");
         }
     }
+    #endregion
 
 
 }

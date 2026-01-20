@@ -11,16 +11,10 @@ using RPGFramework.Workflows;
 using System.Text;
 
 
-internal class TelnetServer
+internal class TelnetServer(int port)
 {
-    private TcpListener _listener;
+    private readonly TcpListener _listener = new(IPAddress.Any, port);
     private bool _isRunning;
-
-
-    public TelnetServer(int port)
-    {
-        _listener = new TcpListener(IPAddress.Any, port);
-    }
 
     public async Task StartAsync()
     {
@@ -38,15 +32,22 @@ internal class TelnetServer
         _listener.Stop();
     }
 
-    private async Task HandleClientAsync(TcpClient client)
+    private static async Task HandleClientAsync(TcpClient client)
     {
         using (client)
         {
             // Create PlayerNetwork object, once logged in we'll attach it to player
-            PlayerNetwork pn = new PlayerNetwork(client);
+            PlayerNetwork pn = new(client);
 
 
             pn.Writer.WriteLine("Username: ");
+
+            if (pn.TelnetConnection == null)
+            {
+                GameState.Log(DebugLevel.Error, "Telnet connection is null (disconnect?).");
+                return;
+            }
+
             //string? playerName = pn.Reader.ReadLine();
             string? playerName = await pn.TelnetConnection.ReadLineAsync();
 
@@ -60,17 +61,19 @@ internal class TelnetServer
             Player player;
 
             // If existing player
-            if (GameState.Instance.Players.ContainsKey(playerName))
+            if (GameState.Instance.Players.TryGetValue(playerName, out Player? value))
             {
                 GameState.Log(DebugLevel.Debug, $"Existing player '{playerName}' found, loading data...");
-                player = GameState.Instance.Players[playerName];
+                player = value;
             }
             else
             {
                 GameState.Log(DebugLevel.Debug, $"No existing player '{playerName}' found, creating new player...");
                 // New player creation (class, etc)
-                player = new Player(client, playerName);
-                player.CurrentWorkflow = new WorkflowOnboarding();
+                player = new Player(client, playerName)
+                {
+                    CurrentWorkflow = new WorkflowOnboarding()
+                };
                 GameState.Instance.AddPlayer(player);
                 player.WriteLine("Welcome, new adventurer! Type start and hit enter to get going");
             }

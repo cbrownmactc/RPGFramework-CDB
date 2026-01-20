@@ -193,7 +193,7 @@ namespace RPGFramework
         /// </summary>
         /// <param name="p">The <see cref="Player"/> instance to be saved. Cannot be <c>null</c>.</param>
         /// <returns>A task that represents the asynchronous save operation.</returns>
-        public static Task SavePlayer(Player p)
+        public Task SavePlayer(Player p)
         {
             return Persistence.SavePlayerAsync(p);
         }

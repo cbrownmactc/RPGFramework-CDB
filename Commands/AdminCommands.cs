@@ -17,6 +17,7 @@ namespace RPGFramework.Commands
         }
     }
 
+    #region AnnounceCommand Class
     internal class AnnounceCommand : ICommand
     {
         public string Name => "announce";
@@ -28,7 +29,9 @@ namespace RPGFramework.Commands
             return true;
         }
     }
+    #endregion
 
+    #region ShutdownCommand Class
     internal class ShutdownCommand : ICommand
     {
         public string Name => "shutdown";
@@ -42,4 +45,5 @@ namespace RPGFramework.Commands
             return true;
         }
     }
+    #endregion
 }

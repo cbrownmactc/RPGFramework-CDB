@@ -59,8 +59,7 @@ namespace RPGFramework
         public static void RoomSay(Room room, string message, Character speaker)
         {
             SendToRoomExcept(room, $"{speaker.Name} says '{message}'", speaker);
-
-            if (speaker is Player) ((Player)speaker).WriteLine($"You say, '{message}'");                           
+            Comm.SendToIfPlayer(speaker, $"You say, '{message}'");
         }
 
         /// <summary>
@@ -73,9 +72,9 @@ namespace RPGFramework
         /// <returns>true if the message was sent to a player; otherwise, false.</returns>
         public static bool SendToIfPlayer(Character character, string message)
         {
-            if (character is Player)
+            if (character is Player player)
             {
-                ((Player)character).WriteLine(message);
+                player.WriteLine(message);
                 return true;
             }
             return false;
