@@ -2,6 +2,7 @@
 using RPGFramework.Enums;
 using RPGFramework.Geography;
 using RPGFramework.Interfaces;
+using Spectre.Console;
 
 namespace RPGFramework.Commands
 {
@@ -17,6 +18,7 @@ namespace RPGFramework.Commands
         }
     }
 
+    #region RoomBuilderCommand Class
     /// <summary>
     /// /room command for building and editing rooms.
     /// </summary>
@@ -24,12 +26,17 @@ namespace RPGFramework.Commands
     {
         public string Name => "/room";
 
-        public IEnumerable<string> Aliases => Array.Empty<string>();
+        public IEnumerable<string> Aliases => new List<string>( );
 
+        #region Execute Method
         public bool Execute(Character character, List<string> parameters)
         {
-            if (character is not Player player)
+            if (character is not Player player)            
+                return false;
+
+            if (!Utility.CheckPermission(player, PlayerRole.Admin))
             {
+                player.WriteLine("You do not have permission to do that.");
                 return false;
             }
 
@@ -41,15 +48,14 @@ namespace RPGFramework.Commands
 
             switch (parameters[1].ToLower())
             {
-                case "description":
-                    RoomSetDescription(player, parameters);
-                    break;
-                case "name":
-                    RoomSetName(player, parameters);
-                    break;
                 case "create":
-                    RoomCreate(player, parameters);
+                    return RoomCreate(player, parameters);                    
+                case "set":
+                    return RoomSet(player, parameters);
+                case "delete":
                     break;
+                case "list":
+                    return RoomList(player, parameters);
                 default:
                     WriteUsage(player);
                     break;
@@ -57,7 +63,10 @@ namespace RPGFramework.Commands
 
             return true;
         }
+        #endregion
 
+        #region WriteUsage Method
+        // TODO Should we make a Help string part of the ICommand interface?
         private static void WriteUsage(Player player)
         {
             player.WriteLine("Usage: ");
@@ -65,16 +74,11 @@ namespace RPGFramework.Commands
             player.WriteLine("/room name '<set room name to this>'");
             player.WriteLine("/room create '<name>' '<description>' <exit direction> '<exit description>'");
         }
+        #endregion
 
-        private static void RoomCreate(Player player, List<string> parameters)
+        #region RoomCreate Method
+        private static bool RoomCreate(Player player, List<string> parameters)
         {
-            if (!Utility.CheckPermission(player, PlayerRole.Admin))
-            {
-                player.WriteLine("You do not have permission to do that.");
-                player.WriteLine("Your Role is: " + player.PlayerRole.ToString());
-                return;
-            }
-
             // 0: /room
             // 1: create
             // 2: name
@@ -84,13 +88,13 @@ namespace RPGFramework.Commands
             if (parameters.Count < 6)
             {
                 player.WriteLine("Usage: /room create '<name>' '<description>' <exit direction> '<exit description>'");
-                return;
+                return false;
             }
 
             if (!Enum.TryParse(parameters[4], true, out Direction exitDirection))
             {
                 player.WriteLine("Invalid exit direction.");
-                return;
+                return false;
             }
 
             try
@@ -99,44 +103,62 @@ namespace RPGFramework.Commands
 
                 player.GetRoom().AddExits(player, exitDirection, parameters[5], room);
                 player.WriteLine("Room created.");
+                return true;
             }
             catch (Exception ex)
             {
                 player.WriteLine($"Error creating room: {ex.Message}");
                 player.WriteLine(ex.StackTrace ?? "");
             }
+            return false;
         }
+        #endregion
 
-        private static void RoomSetDescription(Player player, List<string> parameters)
+        #region RoomList Method
+        private static bool RoomList(Player player, List<string> parameters)       
         {
-            if (!Utility.CheckPermission(player, PlayerRole.Admin))
-            {
-                player.WriteLine("You do not have permission to do that.");
-                return;
-            }
+            var table = new Table();
+            table.AddColumn("Room ID");
+            table.AddColumn("Name");
+            table.AddColumn("Description");
 
-            if (parameters.Count < 3)
+            foreach (var room in 
+                GameState.Instance.Areas[player.GetRoom().AreaId].Rooms.Values.OrderBy(r => r.Id))
             {
-                player.WriteLine(player.GetRoom().Description);
+                table.AddRow(room.Id.ToString(), room.Name, room.Description);
             }
-            else
-            {
-                player.GetRoom().Description = parameters[2];
-                player.WriteLine("Room description set.");
-            }
+            player.Write(table);
+            return true;
         }
+        #endregion
 
-        private static void RoomSetName(Player player, List<string> parameters)
+        #region RoomSet Method
+        private static bool RoomSet(Player player, List<string> parameters)
         {
-            if (parameters.Count < 3)
+            if (parameters.Count < 4)
             {
-                player.WriteLine(player.GetRoom().Name);
+                WriteUsage(player);
+                return false;
             }
-            else
+
+            switch (parameters[2].ToLower())
             {
-                player.GetRoom().Name = parameters[2];
-                player.WriteLine("Room name set.");
+                case "description":
+                    player.GetRoom().Description = parameters[3];
+                    return true;
+                case "name":
+                    player.GetRoom().Name = parameters[3];
+                    return true;
+                case "tags":
+                    player.GetRoom().Tags = parameters[3].Split(',').Select(t => t.Trim()).ToList();
+                    return true;
+                default:
+                    WriteUsage(player);
+                    return false;
             }
         }
+        #endregion
     }
+    #endregion
 }
+
