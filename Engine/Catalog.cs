@@ -1,16 +1,33 @@
-﻿using RPGFramework.Enums;
+﻿using System.Collections;
+using System.Text.Json.Serialization;
+using RPGFramework.Enums;
 using RPGFramework.Interfaces;
 
 namespace RPGFramework
 {
-    internal class Catalog<TKey, TValue> : ICatalog<TKey, TValue>
+    internal class Catalog<TKey, TValue> : 
+        ICatalog<TKey, TValue>
         where TKey : notnull
     {
         #region --- Properties ---
-        public IEnumerable<TKey> Keys => _items.Keys;
-        public IEnumerable<TValue> Values => _items.Values;
-        public int Count => _items.Count;
-        public string Name => typeof(TValue).Name + "Catalog";
+        [JsonInclude]
+        public Dictionary<TKey, TValue> Items
+        {
+            get => _items;
+            private set
+            {
+                _items.Clear();
+                foreach (var kvp in value)
+                {
+                    _items[kvp.Key] = kvp.Value;
+                }
+            }
+        }
+
+        [JsonIgnore] public IEnumerable<TKey> Keys => _items.Keys;
+        [JsonIgnore] public IEnumerable<TValue> Values => _items.Values;
+        [JsonIgnore] public int Count => _items.Count;
+        [JsonIgnore] public string Name => typeof(TValue).Name + "Catalog";
         #endregion
 
         // Fields
@@ -18,6 +35,12 @@ namespace RPGFramework
 
         public Catalog()
         {
+        }
+
+        public Catalog(IEnumerable<KeyValuePair<TKey, TValue>> items)
+        {
+            foreach (var (key, value) in items)
+                Add(key, value);
         }
 
         #region Indexer
@@ -39,7 +62,7 @@ namespace RPGFramework
         }
         #endregion
 
-        #region Add Method
+        #region Add Methods
         public void Add(TKey key, TValue value)
         {
             if (_items.ContainsKey(key))

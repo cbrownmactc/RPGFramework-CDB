@@ -1,5 +1,4 @@
 ﻿
-using System.Net.Http.Headers;
 using System.Text.Json.Serialization;
 using RPGFramework.Enums;
 using RPGFramework.Geography;
@@ -40,12 +39,22 @@ namespace RPGFramework
         #endregion
 
         #region --- Unserialized Properties ---
+
+        #region --- Catalog Properties ---
+        /// <summary>
+        /// This is a convenient way to loop through all catalogs
+        /// </summary>
+        [JsonIgnore] public Dictionary<string, ICatalog> Catalogs { get; private set; } = [];
+        
+        [JsonIgnore] public Catalog<string, Item> ItemCatalog { get; set; } = new();
+        [JsonIgnore] public Catalog<string, Weapon> WeaponCatalog { get; set; } = new();
+        [JsonIgnore] public Catalog<string, Armor> ArmorCatalog { get; set; } = new();
+        #endregion
+
         /// <summary>
         /// All Areas are loaded into this dictionary
         /// </summary>
         [JsonIgnore] public Dictionary<int, Area> Areas { get; set; } = [];
-
-        [JsonIgnore] public Dictionary<string, ICatalog> Catalogs { get; private set; } = [];
 
         /// <summary>
         /// All Players are loaded into this dictionary, with the player's name as the key 
@@ -74,9 +83,9 @@ namespace RPGFramework
         private GameState()
         {
             // Add Catalogs here
-            Catalogs.Add("Item", new Catalog<string, Item>());
-
-
+            Catalogs.Add("Item", ItemCatalog);
+            Catalogs.Add("Weapon", WeaponCatalog);
+            Catalogs.Add("Armor", ArmorCatalog);
         }
 
         public void AddPlayer(Player player)
