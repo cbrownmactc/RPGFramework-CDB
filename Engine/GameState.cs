@@ -283,6 +283,7 @@ namespace RPGFramework
         {               
             await SaveAllPlayers(includeOffline: true);         
             await SaveAllAreas();
+            await SaveCatalogsAsync();
 
             foreach (var player in Players.Values.Where(p => p.IsOnline))
             {
