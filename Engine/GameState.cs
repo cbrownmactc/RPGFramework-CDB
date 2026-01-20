@@ -46,9 +46,9 @@ namespace RPGFramework
         /// </summary>
         [JsonIgnore] public Dictionary<string, ICatalog> Catalogs { get; private set; } = [];
         
-        [JsonIgnore] public Catalog<string, Item> ItemCatalog { get; set; } = new();
-        [JsonIgnore] public Catalog<string, Weapon> WeaponCatalog { get; set; } = new();
-        [JsonIgnore] public Catalog<string, Armor> ArmorCatalog { get; set; } = new();
+        [JsonIgnore] public Catalog<string, Item> ItemCatalog { get; set; } = [];
+        [JsonIgnore] public Catalog<string, Weapon> WeaponCatalog { get; set; } = [];
+        [JsonIgnore] public Catalog<string, Armor> ArmorCatalog { get; set; } = [];
         #endregion
 
         /// <summary>

@@ -1,10 +1,11 @@
-﻿using System.Collections;
-using System.Text.Json.Serialization;
-using RPGFramework.Enums;
+﻿using RPGFramework.Enums;
 using RPGFramework.Interfaces;
+using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 
 namespace RPGFramework
 {
+    [CollectionBuilder(typeof(CatalogBuilder), nameof(CatalogBuilder.Create))]
     internal class Catalog<TKey, TValue> : 
         ICatalog<TKey, TValue>
         where TKey : notnull
@@ -75,6 +76,8 @@ namespace RPGFramework
 
         public bool ContainsKey(TKey key) => _items.ContainsKey(key);
 
+        public Dictionary<TKey, TValue>.Enumerator GetEnumerator() => _items.GetEnumerator();
+
         #region LoadCatalogAsync Method
         public async Task LoadCatalogAsync()
         {
@@ -112,9 +115,24 @@ namespace RPGFramework
         #endregion
 
         public bool TryGetValue(TKey key, out TValue? value) => _items.TryGetValue(key, out value);
+    }
 
-
-
-
+    /// <summary>
+    /// Provides factory methods for creating instances of the Catalog<TKey, TValue> class from collections of key/value
+    /// pairs. This will allow us to add the CollectionBuilder attribute to Catalog so we can support collection expressions.
+    /// </summary>
+    internal static class CatalogBuilder
+    {
+        public static Catalog<TKey, TValue> Create<TKey, TValue>(
+            ReadOnlySpan<KeyValuePair<TKey, TValue>> items)
+            where TKey : notnull
+        {
+            var catalog = new Catalog<TKey, TValue>();
+            foreach (var kvp in items)
+            {
+                catalog.Add(kvp.Key, kvp.Value);
+            }
+            return catalog;
+        }
     }
 }
