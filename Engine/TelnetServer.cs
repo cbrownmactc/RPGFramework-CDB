@@ -58,13 +58,11 @@ internal class TelnetServer(int port)
             }
 
             GameState.Log(DebugLevel.Debug, $"Player '{playerName}' is connecting...");
-            Player player;
 
             // If existing player
-            if (GameState.Instance.Players.TryGetValue(playerName, out Player? value))
+            if (Player.TryFindPlayer(playerName, GameState.Instance.Players, out Player? player))
             {
                 GameState.Log(DebugLevel.Debug, $"Existing player '{playerName}' found, loading data...");
-                player = value;
             }
             else
             {
